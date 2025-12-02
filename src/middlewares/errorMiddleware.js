@@ -1,0 +1,7 @@
+export default function errorMiddleware(err, req, res, next){
+    console.error(err);
+
+    return res.status(err.status || 500).json({
+        message: err.message || "Erro interno no servidor"
+    });
+};
