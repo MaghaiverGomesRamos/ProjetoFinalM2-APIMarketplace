@@ -1,17 +1,9 @@
-import express from "express";
-import cors from "cors";
-import routes from "./routes/index.js";
-import errorMiddleware from "./middlewares/errorMiddleware.js";
+import express from "express"
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+app.get("/", (req, res)=>{
+    res.json({message:"Bem vindo ao servidor."});
+});
 
-// Rotas
-app.use("/api", routes);
-
-// Middleware de erro centralizado 
-app.use(errorMiddleware);
-
-export default app;
+export default app

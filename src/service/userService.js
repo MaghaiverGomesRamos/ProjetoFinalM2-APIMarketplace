@@ -2,9 +2,9 @@ import { prisma } from "../config/database.js";
 import bcrypt from "bcrypt";
 
 class UserService {
-    async getUserById(id) {
+    async getUserByEmail(email) {
         const user = await prisma.user.findFirst({
-            where: { id, deletedAt: null }
+            where: { email, deletedAt: null }
         });
 
         return user; 
