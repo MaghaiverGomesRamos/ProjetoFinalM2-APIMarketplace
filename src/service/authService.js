@@ -2,7 +2,6 @@ import { prisma } from "../config/database.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-// Serviço de autenticação
 class AuthService {
     generateToken(payload) {
         return jwt.sign(payload, process.env.JWT_SECRET, {
