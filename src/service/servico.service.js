@@ -110,3 +110,5 @@ class ServicoService {
     return services
   }
 }
+
+export default ServicoService;
