@@ -50,7 +50,7 @@ class ServicoService {
     });
   }
 
-  static async DeleteService(id, userId) {
+  static async deleteService(id, userId) {
     const servico = await prisma.service.findUnique({ where: { id } });
     const role = await ServiceMiddleware.verificarRole(userId);
 
@@ -110,3 +110,5 @@ class ServicoService {
     return services
   }
 }
+
+export default ServicoService; 
