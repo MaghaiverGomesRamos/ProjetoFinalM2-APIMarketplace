@@ -2,8 +2,8 @@ import { prisma } from "../config/database.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-// Serviço de autenticação
 class AuthService {
+
     generateToken(payload) {
         return jwt.sign(payload, process.env.JWT_SECRET, {
             expiresIn: process.env.JWT_EXPIRES_IN || "30m"
@@ -13,9 +13,24 @@ class AuthService {
     verifyToken(token) {
         try {
             return jwt.verify(token, process.env.JWT_SECRET);
-        } catch (error) {
+        } catch {
             return null;
         }
+    }
+
+    async refreshToken(token) {
+        const payload = this.verifyToken(token);
+
+        if (!payload) {
+            throw new Error("Token inválido ou expirado");
+        }
+
+        const newToken = this.generateToken({
+            id: payload.id,
+            role: payload.role
+        });
+
+        return { token: newToken };
     }
 
     async registerUser(userData) {
@@ -43,14 +58,18 @@ class AuthService {
             }
         });
 
-        const token = this.generateToken({ id: newUser.id });
+        const token = this.generateToken({
+            id: newUser.id,
+            role: newUser.role
+        });
 
         return {
             token,
             user: {
                 id: newUser.id,
                 name: newUser.name,
-                email: newUser.email
+                email: newUser.email,
+                role: newUser.role
             }
         };
     }
