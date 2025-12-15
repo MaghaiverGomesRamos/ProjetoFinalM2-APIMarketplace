@@ -1,7 +1,7 @@
 import { prisma } from "../config/database.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-
+//
 class AuthService {
 
     generateToken(payload) {
