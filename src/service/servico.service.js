@@ -1,15 +1,14 @@
 import prisma from "../config/database.js";
-import ServiceMiddleware from "../middleware/serviceMiddleware.js";
 
 class ServicoService {
 
   static async createService(data) {
-    const role = await ServiceMiddleware.verificarRole(data.providerId)
-    const priceFormated = Number(
-      data.price.replace('.', '').replace(',', '.')
-    );
+    const role = await prisma.user.findUnique({
+      where: { id: data.providerId },
+      select: { role: true }
+    })
 
-    if (role !== "PROVIDER") {
+    if (role.role !== "PROVIDER") {
       throw new Error("Permissão negada: Somente usuários PROVIDERS podem criar serviços.");
     }
 
@@ -18,7 +17,7 @@ class ServicoService {
       data: {
         title: data.title,
         description: data.description ?? null,
-        price: priceFormated,
+        price: data.price,
         providerId: data.providerId,
       },
     });
@@ -27,19 +26,16 @@ class ServicoService {
   static async updateService(id, data, userId) {
     const { providerId, id: _, deletedAt, createdAt, updatedAt, ...dadosPermitidos } = data;
     const servico = await prisma.service.findUnique({ where: { id } });
-    const role = await ServiceMiddleware.verificarRole(userId);
+    const role = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true }
+    })
 
     if (!servico || servico.deletedAt) {
       return null;
     }
 
-    if (dadosPermitidos.price !== undefined && dadosPermitidos.price !== null) {
-      dadosPermitidos.price = Number(
-        dadosPermitidos.price.replace('.', '').replace(',', '.')
-      );
-    }
-
-    if (role !== "PROVIDER" || servico.providerId !== userId) {
+    if (role.role !== "PROVIDER" || servico.providerId !== userId) {
       throw new Error("Permissão negada: Você não pode editar este serviço.");
     }
 
@@ -50,15 +46,18 @@ class ServicoService {
     });
   }
 
-  static async DeleteService(id, userId) {
+  static async deleteService(id, userId) {
     const servico = await prisma.service.findUnique({ where: { id } });
-    const role = await ServiceMiddleware.verificarRole(userId);
+    const role = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true }
+    })
 
     if (!servico || servico.deletedAt) {
       return null
     };
 
-    if (role !== "PROVIDER" || servico.providerId !== userId) {
+    if (role.role !== "PROVIDER" || servico.providerId !== userId) {
       throw new Error("Permissão negada: Você não pode deletar este serviço.");
     }
 
@@ -71,13 +70,16 @@ class ServicoService {
 
   static async restoreService(id, userId) {
     const servico = await prisma.service.findUnique({ where: { id } });
-    const role = await ServiceMiddleware.verificarRole(userId);
+    const role = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true }
+    })
 
     if (!servico || !servico.deletedAt) {
       return null
     };
 
-    if (role !== "PROVIDER" || servico.providerId !== userId) {
+    if (role.role !== "PROVIDER" || servico.providerId !== userId) {
       throw new Error("Permissão negada: Você não pode restaurar este serviço.");
     }
 
@@ -88,25 +90,73 @@ class ServicoService {
     });
   }
 
-  static async getAllService() {
-    const allServices = await prisma.service.findMany({
-      where: {
-        deletedAt: null
+  static async getAllService(page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+
+    const [services, total] = await Promise.all([
+      prisma.service.findMany({
+        where: { deletedAt: null },
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" }
+      }),
+      prisma.service.count({
+        where: { deletedAt: null }
+      })
+    ]);
+
+    console.log({
+      data: services,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
       }
     })
-    console.log(allServices);
-    return allServices
+
+    return {
+      data: services,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   }
 
-  static async getServiceByUser(providerId) {
-    const services = await prisma.service.findMany({
-      where: {
-        providerId,
-        deletedAt: null,
-      }
-    })
+  static async getServiceByUser(providerId, page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
 
-    console.log(services);
-    return services
+    const [services, total] = await Promise.all([
+      prisma.service.findMany({
+        where: {
+          providerId,
+          deletedAt: null,
+        },
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" }
+      }),
+      prisma.service.count({
+        where: {
+          providerId,
+          deletedAt: null,
+        }
+      })
+    ]);
+
+    return {
+      data: services,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   }
 }
+
+export default ServicoService; 
