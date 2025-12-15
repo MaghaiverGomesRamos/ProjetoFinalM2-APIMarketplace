@@ -4,15 +4,22 @@ const userService = new UserService();
 
 class UserController {
   async getUserByEmail(req, res) {
-    const { email } = req.paramns;
+    const { email } = req.params;
 
     const user = await userService.getUserByEmail(email);
 
     if (!user) {
-      throw { status: 404, message: "Usuario não encontrado" };
+      throw { status: 404, message: "Usuário não encontrado" };
     }
 
-    res.status(200).json(user);
+    const userResponse = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role 
+    }
+
+    res.status(200).json(userResponse);
   }
 
   async updateUser(req, res) {
@@ -26,7 +33,14 @@ class UserController {
       throw { status: 403, message: "Você não tem permissão para editar este usuário" };
     }
 
-    res.status(200).json(updated);
+    const userResponse = {
+      id: updated.id,
+      name: updated.name,
+      email: updated.email,
+      role: updated.role
+    }
+
+    res.status(200).json(userResponse);
   }
 
   async deleteUser(req, res) {
@@ -39,7 +53,7 @@ class UserController {
         throw { status: 403, message: "Você não tem permissão para deletar este usuario"};
     }
 
-    res.status(200).json({ message: "Usuário deletado com sucesso"});
+    res.status(204).json({ message: "Usuário deletado com sucesso"});
   }
 }
 

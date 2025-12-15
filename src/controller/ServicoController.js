@@ -7,7 +7,7 @@ class ServicoController {
 
         const service = await ServicoService.createService(data);
 
-        res.status(200).json(service);
+        res.status(201).json(service);
     }
 
     static async update(req, res){
@@ -28,7 +28,7 @@ class ServicoController {
         const { id } = req.params;
         const userId = req.user.id;
 
-        const deleted = await ServicoService.DeleteService(id, userId);
+        const deleted = await ServicoService.deleteService(id, userId);
 
         if (!deleted){
             throw {status: 404, message: "Serviço não encontrado"};
@@ -61,6 +61,12 @@ class ServicoController {
 
         const services = await ServicoService.getServiceByUser(providerId);
 
+        if(!services){
+            throw { status: 404, message: "Serviço não encontrado"};
+        }
+
         res.status(200).json(services);
     }
 }
+
+export default ServicoController;
