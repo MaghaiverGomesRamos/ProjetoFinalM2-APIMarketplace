@@ -2,94 +2,101 @@ import prisma from "../config/database.js";
 
 class ServicoService {
 
+  // Cria um novo serviço
+  // Apenas usuários com role PROVIDER podem criar
   static async createService(data) {
     const role = await prisma.user.findUnique({
       where: { id: data.providerId },
       select: { role: true }
-    })
+    });
 
     if (role.role !== "PROVIDER") {
-      throw new Error("Permissão negada: Somente usuários PROVIDERS podem criar serviços.");
+      throw { status: 403, message: "Permissão negada: Somente usuários PROVIDERS podem criar serviços." };
     }
 
-    console.log("Serviço criado com sucesso!");
+    // Cria serviço vinculado ao provider
     return prisma.service.create({
       data: {
         title: data.title,
         description: data.description ?? null,
         price: data.price,
-        providerId: data.providerId,
+        provider: { connect: { id: data.providerId } },
       },
     });
   }
 
+  // Atualiza um serviço existente
+  // Verifica se o serviço existe, se não está deletado e se o usuário logado tem permissão
   static async updateService(id, data, userId) {
     const { providerId, id: _, deletedAt, createdAt, updatedAt, ...dadosPermitidos } = data;
+
     const servico = await prisma.service.findUnique({ where: { id } });
     const role = await prisma.user.findUnique({
       where: { id: userId },
       select: { role: true }
-    })
+    });
 
     if (!servico || servico.deletedAt) {
-      return null;
+      throw { status: 404, message: "Serviço não encontrado." };
     }
 
     if (role.role !== "PROVIDER" || servico.providerId !== userId) {
-      throw new Error("Permissão negada: Você não pode editar este serviço.");
+      throw { status: 403, message: "Permissão negada: Você não pode editar este serviço." };
     }
 
-    console.log("Serviço atualizado com sucesso!");
     return prisma.service.update({
       where: { id },
       data: dadosPermitidos,
     });
   }
 
+  // Deleta um serviço (soft delete)
+  // Apenas o provider dono do serviço pode deletar
   static async deleteService(id, userId) {
     const servico = await prisma.service.findUnique({ where: { id } });
     const role = await prisma.user.findUnique({
       where: { id: userId },
       select: { role: true }
-    })
+    });
 
     if (!servico || servico.deletedAt) {
-      return null
-    };
-
-    if (role.role !== "PROVIDER" || servico.providerId !== userId) {
-      throw new Error("Permissão negada: Você não pode deletar este serviço.");
+      throw { status: 404, message: "Serviço não encontrado." };
     }
 
-    console.log("Serviço deletado com sucesso!");
+    if (role.role !== "PROVIDER" || servico.providerId !== userId) {
+      throw { status: 403, message: "Permissão negada: Você não pode deletar este serviço." };
+    }
+
     return prisma.service.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
   }
 
+  // Restaura um serviço deletado
+  // Apenas o provider dono do serviço pode restaurar
   static async restoreService(id, userId) {
     const servico = await prisma.service.findUnique({ where: { id } });
     const role = await prisma.user.findUnique({
       where: { id: userId },
       select: { role: true }
-    })
+    });
 
     if (!servico || !servico.deletedAt) {
-      return null
-    };
-
-    if (role.role !== "PROVIDER" || servico.providerId !== userId) {
-      throw new Error("Permissão negada: Você não pode restaurar este serviço.");
+      throw { status: 404, message: "Serviço não encontrado ou não está deletado." };
     }
 
-    console.log("Serviço restaurado com sucesso!");
+    if (role.role !== "PROVIDER" || servico.providerId !== userId) {
+      throw { status: 403, message: "Permissão negada: Você não pode restaurar este serviço." };
+    }
+
     return prisma.service.update({
       where: { id },
       data: { deletedAt: null },
     });
   }
 
+  // Lista todos os serviços ativos com paginação
   static async getAllService(page = 1, limit = 10) {
     const skip = (page - 1) * limit;
 
@@ -100,20 +107,8 @@ class ServicoService {
         take: limit,
         orderBy: { createdAt: "desc" }
       }),
-      prisma.service.count({
-        where: { deletedAt: null }
-      })
+      prisma.service.count({ where: { deletedAt: null } })
     ]);
-
-    console.log({
-      data: services,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
-      }
-    })
 
     return {
       data: services,
@@ -126,25 +121,18 @@ class ServicoService {
     };
   }
 
+  // Lista serviços de um provider específico com paginação
   static async getServiceByUser(providerId, page = 1, limit = 10) {
     const skip = (page - 1) * limit;
 
     const [services, total] = await Promise.all([
       prisma.service.findMany({
-        where: {
-          providerId,
-          deletedAt: null,
-        },
+        where: { providerId, deletedAt: null },
         skip,
         take: limit,
         orderBy: { createdAt: "desc" }
       }),
-      prisma.service.count({
-        where: {
-          providerId,
-          deletedAt: null,
-        }
-      })
+      prisma.service.count({ where: { providerId, deletedAt: null } })
     ]);
 
     return {
@@ -159,4 +147,4 @@ class ServicoService {
   }
 }
 
-export default ServicoService; 
+export default ServicoService; // Exporta serviço de gerenciamento de serviços
